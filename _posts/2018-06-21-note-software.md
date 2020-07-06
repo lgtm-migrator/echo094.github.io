@@ -2,7 +2,7 @@
 layout: post
 title:  "软件实用技巧"
 date:   2018-06-21 00:00:00 +0000
-categories: note
+tags: note
 ---
 
 修改时间： 2019-08-04

@@ -2,7 +2,7 @@
 layout: post
 title:  "算法题做题记录"
 date:   2018-08-21 00:00:00 +0000
-categories: algorithm c++
+tags: algorithm c++
 ---
 
 修改时间： 2018-09-11

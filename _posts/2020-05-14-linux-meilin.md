@@ -2,7 +2,7 @@
 layout: post
 title:  "梅林KoolShare版配置说明"
 date:   2020-05-14 00:00:00 +0000
-categories: linux router meilin
+tags: linux router meilin
 ---
 
 修改时间： 2020-05-23

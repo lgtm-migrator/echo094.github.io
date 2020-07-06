@@ -2,7 +2,7 @@
 layout: post
 title:  "C++学习笔记"
 date:   2018-06-25 00:00:00 +0000
-categories: c++
+tags: c++
 ---
 
 修改时间： 2018-08-26

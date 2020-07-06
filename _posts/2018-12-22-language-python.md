@@ -2,7 +2,7 @@
 layout: post
 title:  "Python学习笔记"
 date:   2018-12-22 00:00:00 +0000
-categories: python
+tags: python
 ---
 
 ## 学习资料

@@ -2,7 +2,7 @@
 layout: post
 title:  "Ubuntu配置HTTPS服务器"
 date:   2020-06-24 00:00:00 +0000
-categories: linux apache2 ssl
+tags: linux apache2 ssl
 ---
 
 

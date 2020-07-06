@@ -2,7 +2,7 @@
 layout: post
 title:  "Vmware安装DSM6.2"
 date:   2020-07-04 00:00:00 +0000
-categories: linux synology
+tags: linux synology
 ---
 
 

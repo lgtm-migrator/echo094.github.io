@@ -2,7 +2,7 @@
 layout: post
 title:  "Openwrt配置说明"
 date:   2018-09-25 00:00:00 +0000
-categories: linux router openwrt
+tags: linux router openwrt
 ---
 
 修改时间： 2020-06-09
