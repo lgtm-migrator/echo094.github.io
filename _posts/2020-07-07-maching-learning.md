@@ -118,7 +118,7 @@ $$
 p(y=1|x;\phi,\mu_0,\mu_1,\Sigma) &= \frac{p(x|y=1)p(y=1)}{p(x)} \\
 &= \frac{1}{1 + \frac{p(x|y=0)p(y=0)}{p(x|y=1)p(y=1)}} \\ 
 &= \frac{1}{1 + \exp\left(
--(\mu_1-\mu_0)^T\Sigma^{-1}x
+-(\Sigma^{-1}(\mu_1-\mu_0))^Tx
 -\frac{1}{2}(\mu_0^T\Sigma^{-1}\mu_0-\mu_1^T\Sigma^{-1}\mu_1)
 +\log(\frac{1-\phi}{\phi})
 \right)}
@@ -127,4 +127,39 @@ $$
 
 也就是说，通过合并参数，可将GDA化简成逻辑回归。因此，逻辑回归更通用。但如果数据符合GDA的限制条件时，使用GDA预测会更精确。
 
+### 1.4 代码实现
+
+以下代码先计算了含有两个分类的GDA模型中的必要参数，然后将其转换为逻辑回归进行进行预测：
+
+```python
+def fit(self, x, y):
+    """Fit a GDA model to training set given by x and y by updating
+    self.theta (dim + 1, 1).
+
+    Args:
+        x: Training example inputs. Shape (n_examples, dim).
+        y: Training example labels. Shape (n_examples,).
+    """
+    d = x.shape[1]
+    n = y.shape[0]
+    n1 = np.sum(y)
+    n0 = n - n1
+    y = y.reshape((n, 1))
+    # Find phi, mu_0, mu_1, and sigma
+    phi = n1 / n
+    mu_0 = np.dot(x.T, 1-y) / n0
+    mu_1 = np.dot(x.T, y) / n1
+    mu = np.dot(1-y, mu_0.T) + np.dot(y, mu_1.T)
+    sigma = np.dot((x-mu).T, x-mu) / n
+    # Write theta in terms of the parameters
+    sigma_i = np.linalg.inv(sigma)
+    theta0 = (np.log(phi / (1-phi))
+              + np.dot(np.dot(mu_0.T, sigma_i), mu_0) / 2
+              - np.dot(np.dot(mu_1.T, sigma_i), mu_1) / 2)
+    theta_ex = np.dot(sigma_i, mu_1 - mu_0)
+    theta = np.zeros((d+1, 1))
+    theta[0][0] = theta0
+    theta[1:, :] = theta_ex
+    self.theta = theta
+```
 
