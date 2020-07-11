@@ -40,14 +40,30 @@ tags: ML
 2. 我们的目标是预测 $$T(y)$$ 的期望值：
 
    $$
-   h(x) = E(T(y)|x)
+   h(x) = E(T(y)|x) = \frac{\partial}{\partial\eta}a(\eta)
    $$
 
    这一函数也被称为响应函数（**response function**）： $$g(\eta)$$ ，其反函数被称为关联函数（**link function**）：$$ g^{-1}(\eta)$$ 。
 
 3. 自然参数与观察变量是线性关系：$$\eta=\theta^Tx$$ 。
 
-线性回归，logistic回归，以及softmax回归都属于广义线性模型。
+另外，预测变量的方差可表示为：
+
+$$
+Var(Y;\eta) = E(Y^2;\eta) - (E(Y;\eta))^2 = \frac{\partial^2}{\partial\eta^2}a(\eta)
+$$
+
+正常情况下，GLM的代价函数采用下述定义（可删去常数项）：
+
+$$
+J(\theta) = -\frac{1}{n}\log L(\theta) = -\frac{1}{n}\log \prod_{i=1}^n p(y^{(i)}|x^{(i)}, \theta)
+$$
+
+因此其微分方程也有固定的形式：
+
+$$
+\nabla_{\theta}J = -\frac{1}{n}\sum_{i=1}^n x^{(i)}(y^{(i)} - a^{'}(\eta))
+$$
 
 
 
@@ -100,10 +116,18 @@ $$
 另一方面，线性回归的代价函数为：
 
 $$
-J(\theta) = \frac{1}{2m}\sum_{i=1}^m(h_{\theta}(x^{(i)})-y^{(i)})^2
+J(\theta) = \frac{1}{2n}\sum_{i=1}^n(h_{\theta}(x^{(i)})-y^{(i)})^2
 $$
 
 因此，求预测函数的最小值就相当于求它的最大似然估计，也就是令误差最小。
+
+**解析法**
+
+将输入矩阵X定义为(n, d+1)的形式，将结果y定义为(n, 1)的形式，那么系数可以直接用最小二乘公式计算出来：
+
+$$
+X^T X\theta = X^Ty
+$$
 
 
 
@@ -185,3 +209,64 @@ $$
 ### 2.3 softmax回归
 
 与逻辑回归相似，只是预测值变成了多个分类。
+
+
+
+### 2.4 Poisson回归
+
+先将泊松分布的概率函数转化为指数分布家族的形式：
+
+$$
+\begin{aligned}
+p(y;\lambda) 
+&= \frac{e^{-\lambda}\lambda^y}{y!} \\
+&= \frac{1}{y!}\exp(\log(\lambda) \cdot y - \lambda)
+\end{aligned}
+$$
+
+其中，
+
+$$
+\eta = \log\lambda \Rightarrow
+\lambda = e^{\eta}
+$$
+
+模型的目标函数可以表示为：
+
+$$
+h_{\theta}(x) = E(T(y)|x) = \lambda = e^{\eta} = e^{\theta^Tx}
+$$
+
+该模型的对数似然估计为：
+
+$$
+\begin{aligned}
+l(\theta) &= \log  \prod_{i=1}^n p(y^{(i)};\lambda) \\
+&= \sum_{i=1}^n -h(x^{(i)}) + y^{(i)}\log h(x^{(i)}) - \log (y^{(i)}!)
+\end{aligned}
+$$
+
+假设只有一组样本，上式的微分方程为：
+
+$$
+\frac{\partial }{\partial  \theta_j} l(\theta) 
+= h^{'}(x)(\frac{y}{h(x)} - 1)
+= (y-h(x))x_j
+$$
+
+由此可以得到反向传播函数（这里是最大化）：
+
+$$
+\theta := \theta + \alpha(y^{(i)}-h(x^{(i)}))x^{(i)}
+$$
+
+根据模型的对数似然估计，将代价函数设定为（常数项可以省略）：
+
+$$
+J(\theta) = -\frac{1}{n}\log L(\theta) 
+= \frac{1}{n} \sum_{i=1}^n \left( 
+h(x^{(i)}) - y^{(i)}\log h(x^{(i)}) + \log (y^{(i)}!)
+\right)
+$$
+
+
