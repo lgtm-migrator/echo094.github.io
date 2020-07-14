@@ -7,6 +7,12 @@ tags: linux synology
 
 
 
+
+
+
+
+更新日期：2020-07-14
+
 系统： DSM 6.2-23739 (DS3617xs)
 
 
@@ -85,11 +91,17 @@ tags: linux synology
 
 这时可以在浏览器中打开QB的Web页面了。
 
+**迁移数据**
+
 如果想要将现有的保种数据迁移过来，可以使用下面这个python工具：
 
 [jslay88/qbt_migrate: Migrate qBittorrent downloads](https://github.com/jslay88/qbt_migrate)
 
 经测试`4.2.5`版本的`BT_backup`可以完美转换，我顺便理了下Windows下的下载路径。
+
+**ipv6**
+
+默认情况下，docker不会给容器分配ipv6地址，网上相关资料也很少。为了使用ipv6，最后还是安装了套件版的。还好有上面的工具批量修改下载路径。
 
 
 
@@ -158,9 +170,9 @@ mount /dev/md3 /mnt/ -o rw
 
 ## 2 迁移硬盘
 
-其实还是有点小担心，万一买了正版设备以后硬盘不能直接添加，还要吧数据倒腾一遍。
+国行DS920+上市了，果断买了一台。拿到手先插一个空硬盘装系统，系统版本为（DSM 6.2.3-25426）。关机后把虚拟机挂载的磁盘按顺序放到新的NAS中（虚拟机的虚拟磁盘对应NAS的盘位1）。
 
-仔细看了下文档：[如何在多台 Synology NAS（DSM 6.0 和更新版本）之间进行迁移](https://www.synology.com/zh-cn/knowledgebase/DSM/tutorial/General_Setup/How_to_migrate_between_Synology_NAS_DSM_6_0_and_later)，根据黑群晖的型号，我如果购买即将推出的920+，只要系统没有升级到7.0（可能性不大），是可以迁移的。
+开机以后硬盘能够正常读取，只需要修复一下系统分区，毕竟920的系统版本比黑群的高。
 
-另外，对于黑转白这种行为，商家应该加以支持才对，如果设置了重重关卡，就没必要转白了。
+根据官方文档：[如何在多台 Synology NAS（DSM 6.0 和更新版本）之间进行迁移](https://www.synology.com/zh-cn/knowledgebase/DSM/tutorial/General_Setup/How_to_migrate_between_Synology_NAS_DSM_6_0_and_later)，使用**Hyper Backup**迁移时，发现qbittorrent等第三方套件都不能备份。这也不是大问题，可以把包含配置文件的目录备份，再在新设备中手动安装套件即可。
 
