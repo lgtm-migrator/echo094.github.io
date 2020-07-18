@@ -5,9 +5,11 @@ date:   2018-09-25 00:00:00 +0000
 tags: linux router openwrt
 ---
 
-修改时间： 2020-06-09
 
-**最近学校愈发丧心病狂，现在ipv6不仅只能获取到/128的单播地址，还需要认证，之前桥接的路子也不管用了，只能用NAT6。**
+
+修改时间： 2020-07-18
+
+
 
 路由器版本：
 
@@ -596,5 +598,15 @@ opkg install luci-i18n-upnp-en
 
 ```shell
 opkg install luci-i18n-wol-en
+```
+
+
+
+## 相关指令
+
+查看当前连接：
+
+```bash
+cat /proc/net/nf_conntrack
 ```
 
