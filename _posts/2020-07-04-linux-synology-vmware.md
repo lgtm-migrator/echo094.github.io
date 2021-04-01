@@ -7,11 +7,11 @@ tags: linux synology
 
 
 
+在给物理设备修改配置前，先用虚拟机试验一番。
 
 
 
-
-更新日期：2020-07-14
+更新日期：2021-04-01
 
 系统： DSM 6.2-23739 (DS3617xs)
 
@@ -80,11 +80,10 @@ tags: linux synology
 [群晖docker安装80x86/qbittorrent完整教程 - 大卫 blog](https://www.iyuu.cn/archives/304/)
 
 0. 先安装`Docker`，容器版的QB可以自己链接需要的下载路径，方便以后的迁移（虽然用工具也很方便）。
-
 1. 在`Docker`中安装`80x86/qbittorrent`，这里选择`alpine`，`focal`为Ubuntu平台。
-
 2. 在`Image`标签页中新建`Container`，注意需要在高级中设置必要的路径和端口。
-
+   * 如果需要使用ipv6，需要将网络设置为`Use the same network as Docker Host`，使用桥接时ipv6会失效。
+   * 需要在环境变量中配置`PUID`和`PGID`，使用默认设置会出现无法访问下载文件夹的问题。
 3. 在`Container`标签页中运行`qbittorrent`，默认的用户名和密码可以在`Details/Log`中查看，为`admin`和`adminadmin`。
 
 * 默认的配置文件开启了HTTPS，如果不上传证书，可以在配置文件`config/qBittorrent.conf`中将`WebUI\HTTPS\Enabled`设置为`false`。
@@ -98,10 +97,6 @@ tags: linux synology
 [jslay88/qbt_migrate: Migrate qBittorrent downloads](https://github.com/jslay88/qbt_migrate)
 
 经测试`4.2.5`版本的`BT_backup`可以完美转换，我顺便理了下Windows下的下载路径。
-
-**ipv6**
-
-默认情况下，docker不会给容器分配ipv6地址，网上相关资料也很少。为了使用ipv6，最后还是安装了套件版的。还好有上面的工具批量修改下载路径。
 
 
 
