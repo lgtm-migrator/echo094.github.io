@@ -7,7 +7,7 @@ tags: linux router openwrt
 
 
 
-修改时间： 2020-07-19
+修改时间： 2021-08-15
 
 
 
@@ -37,6 +37,21 @@ Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
 * 建议关闭`HTTP到HTTPS的重定向`，否则内网使用IP访问会有警告
 * `let‘s encrypt`证书有效期为3个月，需要定期更新
 
+
+
+## 配置无线中继
+
+* 新建接口`WWAN`和`WWAN6`，分别配置为`DHCP`以及`DHCPv6`，设置防火墙区域为`wan`
+  
+* 在无线页面中扫描并添加，在通用设置中绑定上面的两个网络接口
+  
+* 当使用NAT6时，在`/etc/firewall.user`添加ip6tables规则，假设wlan设备为`wlan1`：
+  
+  ```shell
+  ip6tables -t nat -A POSTROUTING -o wlan1 -j MASQUERADE
+  ```
+  
+  可以参考：[Lede、PandoraBox IPv6 NAT66的实战操作【亲测】](https://www.right.com.cn/forum/thread-253712-1-1.html)
 
 
 ## 配置 ipv6
@@ -350,13 +365,11 @@ DHCP选项中的第一个数字为`DHCP 选项编号`，可以直接查找相关
 
 
 
-## 功能模块
-
-### Firewall
+## Firewall
 
 防火墙的额外配置
 
-#### 安装ipset
+### 安装ipset
 
 使用`opkg`安装即可，一般用不到，但可以去除一个`Warning`。
 
@@ -366,7 +379,7 @@ opkg install ipset
 
 
 
-#### NAT6端口转发
+### NAT6端口转发
 
 毕竟是一个很小众的使用方式，只能通过命令配置。
 
@@ -388,22 +401,24 @@ opkg install ipset
 
 network_find_wan6 wan_iface6
 network_get_ipaddr6 wan_ip6 "$wan_iface6"
+network_get_physdev wan_dev "$wan_iface6"
 if [ -z "$wan_ip6" ]; then
 	logger -t IPv6 "NAT6 wan iface: $wan_iface6 ip not found"
 	echo "NAT6 wan iface: $wan_iface6 ip not found"
 	exit 0
 fi
-logger -t IPv6 "NAT6 wan iface: $wan_iface6 ip: $wan_ip6"
-echo "NAT6 wan iface: $wan_iface6 ip: $wan_ip6"
+logger -t IPv6 "NAT6 wan iface: $wan_iface6 ip: $wan_ip6 dev: $wan_dev"
+echo "NAT6 wan iface: $wan_iface6 ip: $wan_ip6 dev: $wan_dev"
 
 network_get_ipaddr6 lan_ip6 "lan"
+network_get_physdev lan_dev "lan"
 if [ -z "$lan_ip6" ]; then
 	logger -t IPv6 "NAT6 lan iface: lan ip not found"
 	echo "NAT6 lan iface: lan ip not found"
 	exit 0
 fi
-logger -t IPv6 "NAT6 lan iface: lan ip: $lan_ip6"
-echo "NAT6 lan iface: lan ip: $lan_ip6"
+logger -t IPv6 "NAT6 lan iface: lan ip: $lan_ip6 dev: $lan_dev"
+echo "NAT6 lan iface: lan ip: $lan_ip6 dev: $lan_dev"
 
 network_get_subnet6 sub_ip6 "lan"
 if [ -z "$sub_ip6" ]; then
@@ -422,26 +437,28 @@ nat6_client_rule() {
 	local src_dport="$1"
 	local dest_ip="$2"
 	local dest_port="$3"
+	local proto="$4"
 
-	echo "NAT6 DNAT CLIENT $src_dport $dest_ip $dest_port"
+	echo "NAT6 DNAT CLIENT $src_dport $dest_ip $dest_port $proto"
 	# zone_lan_postrouting
-	$IP6TABLES -t nat -A POSTROUTING -o br-lan -p tcp -s "$sub_ip6" -d "$dest_ip" --dport "$dest_port" -j SNAT --to-source "[$lan_ip6]"
+	$IP6TABLES -t nat -A POSTROUTING -o "$lan_dev" -p "$proto" -s "$sub_ip6" -d "$dest_ip" --dport "$dest_port" -j SNAT --to-source "[$lan_ip6]"
 	# zone_lan_prerouting
-	$IP6TABLES -t nat -A PREROUTING -i br-lan -p tcp -s "$sub_ip6" -d "$wan_ip6" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
+	$IP6TABLES -t nat -A PREROUTING -i "$lan_dev" -p "$proto" -s "$sub_ip6" -d "$wan_ip6" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
 	# zone_wan_prerouting
-	$IP6TABLES -t nat -A PREROUTING -i eth0.2 -p tcp --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
+	$IP6TABLES -t nat -A PREROUTING -i "$wan_dev" -p "$proto" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
 }
 
 nat6_gate_rule() {
 	local src_dport="$1"
 	local dest_ip="$2"
 	local dest_port="$3"
+	local proto="$4"
 
-	echo "NAT6 DNAT GATE $src_dport $dest_ip $dest_port"
+	echo "NAT6 DNAT GATE $src_dport $dest_ip $dest_port $proto"
 	# zone_lan_prerouting
-	$IP6TABLES -t nat -A PREROUTING -i br-lan -p tcp -s "$sub_ip6" -d "$wan_ip6" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
+	$IP6TABLES -t nat -A PREROUTING -i "$lan_dev" -p "$proto" -s "$sub_ip6" -d "$wan_ip6" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
 	# zone_wan_prerouting
-	$IP6TABLES -t nat -A PREROUTING -i eth0.2 -p tcp --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
+	$IP6TABLES -t nat -A PREROUTING -i "$wan_dev" -p "$proto" --dport "$src_dport" -j DNAT --to-destination "[$dest_ip]":"$dest_port"
 }
 
 # Accept port forwards
@@ -452,7 +469,7 @@ $IP6TABLES -t filter -A zone_lan_input -m conntrack --ctstate DNAT -j ACCEPT
 $IP6TABLES -t filter -A zone_wan_input -m conntrack --ctstate DNAT -j ACCEPT
 
 # Add redirect rules
-nat6_client_rule "公网端口" "内网IP" "内网端口"
+nat6_client_rule "公网端口" "内网IP" "内网端口" "proto"
 
 ```
 
@@ -468,7 +485,7 @@ config include
 
 
 
-### Openvpn
+## Openvpn
 
 新版的系统中设置方法又简化了。
 
@@ -476,7 +493,7 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
 
 
 
-#### 在路由器运行Server
+### 在路由器运行Server
 
 **千万不要添加端口转发**
 
@@ -570,7 +587,7 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
 
 
 
-#### 在旁路由运行Server
+### 在旁路由运行Server
 
 同样按照上述过程操作，并且在主路由中添加端口转发，不出意外的话客户端能够成功连接了。
 
@@ -584,7 +601,7 @@ iptables -t nat -A POSTROUTING -s 10.8.1.0/24 -j MASQUERADE
 
 
 
-#### 在终端运行Client
+### 在终端运行Client
 
 这是电脑客户端的配置
 
@@ -617,7 +634,7 @@ nobind
 
 
 
-#### 在路由器运行Client
+### 在路由器运行Client
 
 在OpenWrt中使用客户端文件连接远程服务器，可以参照server中的步骤，用同样的方式建立一个接口`tun0`，并设定防火墙规则为`wan`，然后将配置文件中的适配器指定为`tun0`。
 
@@ -627,7 +644,7 @@ nobind
 
 
 
-### vlmcsd
+## vlmcsd
 
 升级了Office2019，学校的KMS还没更新。虽然自己有365，但是不够用。找了一下，有人移植了KMS服务到OpenWrt上，就拿来试试了。
 
@@ -651,7 +668,7 @@ nslookup -type=srv _vlmcs._tcp.lan
 
 
 
-### 其它模块
+## 其它模块
 
 `upnp`:
 
