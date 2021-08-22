@@ -53,6 +53,14 @@ Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
   
   可以参考：[Lede、PandoraBox IPv6 NAT66的实战操作【亲测】](https://www.right.com.cn/forum/thread-253712-1-1.html)
 
+  如果子网设备的ipv6连接还是有问题，可以通过`route -A inet6`查看默认网关是否有问题，
+  可能是路由距离`metric`数值太大，可通过下述指令获取网关并添加路由(注意替换脚本中的变量)。
+  
+  ```shell
+  ip -6 route | grep default
+  route -A inet6 add default gw $GW dev $DEV
+  ```
+
 
 ## 配置 ipv6
 
