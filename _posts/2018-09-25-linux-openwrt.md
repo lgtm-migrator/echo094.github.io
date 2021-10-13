@@ -7,7 +7,7 @@ tags: linux router openwrt
 
 
 
-修改时间： 2021-08-15
+修改时间： 2021-10-13
 
 
 
@@ -17,7 +17,7 @@ Model: Newifi-D2
 
 Architecture: MediaTek MT7621 ver:1 eco:3
 
-Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
+Firmware Version: OpenWrt 21.02.0 r16279-5cc0535800
 
 
 
@@ -25,9 +25,9 @@ Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
 
 参考：[openwrt开启ssl 使用let‘s encrypt的证书](https://www.right.com.cn/forum/forum.php?mod=viewthread&tid=310924&page=1)
 
-1. 前往` www.sslforfree.com`申请通配符证书
+1. 前往`www.sslforfree.com`申请通配符证书
 2. 安装下面两个包：`luci-ssl`，`luci-app-uhttpd`
-3. 将`certificate.crt`以及`private.key`上传到路由器
+3. 将`fullchain.cer`以及`private.key`上传到路由器
 4. 修改`uhttpd`配置文件`/etc/config/uhttpd.conf`，修改证书文件的路径以及监听端口
 5. 重启`uhttpd`服务
 6. 在防火墙中添加端口转发并重启
@@ -36,6 +36,12 @@ Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
 
 * 建议关闭`HTTP到HTTPS的重定向`，否则内网使用IP访问会有警告
 * `let‘s encrypt`证书有效期为3个月，需要定期更新
+
+
+
+## 配置阿里DDNS
+
+直接使用下面仓库的脚本即可：[h46incon/AliDDNSBash](https://github.com/h46incon/AliDDNSBash)
 
 
 
@@ -62,47 +68,17 @@ Firmware Version: OpenWrt 19.07.3 r11063-85e04e9f46
   ```
 
 
+
 ## 配置 ipv6
 
-根据这个帖子：[广州移动家宽已支持 dhcpv6-pd#52](https://www.v2ex.com/t/483739#r_6117230)，找到了以下两个帖子：[OpenWrt/LEDE 内网转发 IPv6](https://i-meto.com/lede-ipv6/)，[OpenWRT/LEDE 开启免 NAT 全局 IPv6](https://blog.rabit.pw/2017/lede-ipv6/)。其中有三种解决方案。
-
-
-
-### Relay
-
-如果上级网关支持，可照着这个资料修改：[OpenWrt 路由器如何让 lan 口主机获得 ipv6 网络访问？](https://www.zhihu.com/question/29667477/answer/93634257)。
-
-* 在LuCI界面删除**接口/全局网络选项**配置下的IPv6 ULA 前缀
-
-* 配置/etc/config/dhcp
-
-```wiki
-config dhcp 'lan'
-	option interface 'lan'                   
-	option start '100'                       
-	option limit '150'                       
-	option leasetime '12h' 
-	option ra 'relay'                                            
-	option ndp 'relay'
-	option dhcpv6 'relay'
-	
-config dhcp 'wan'                                
-	option interface 'wan'                   
-	option ignore '1'
-
-config dhcp 'wan6'
-	option interface 'wan'
-	option ra 'relay'                        
-	option ndp 'relay'  
-	option dhcpv6 'relay'  
-	option master '1'
-```
-
-关于中继代理，可以参考下述文章：[DHCPv6中的中继代理在IPv6路由器中的实现](http://dx.chinadoi.cn/10.3969/j.issn.1007-130X.2009.06.003)
-
-
-
-### NAT6
+根据这个帖子：[广州移动家宽已支持 dhcpv6-pd#52](https://www.v2ex.com/t/483739#r_6117230)，
+找到了以下两个帖子：[OpenWrt/LEDE 内网转发 IPv6](https://i-meto.com/lede-ipv6/)，
+[OpenWRT/LEDE 开启免 NAT 全局 IPv6](https://blog.rabit.pw/2017/lede-ipv6/)。
+在上级路由没有分配PD前缀时，有三种解决方案：Relay，Passthrough和NAT6。
+Relay可以参考下列帖子：[OpenWrt 路由器如何让 lan 口主机获得 ipv6 网络访问？](https://www.zhihu.com/question/29667477/answer/93634257)，
+这种方法并不是在所有环境下都有效。
+Passthrough就是将IPV6协议的WAN与LAN桥接，会导致路由器无法获取IP地址，并不实用。
+因此这里使用NAT6的方式，下面为设置流程。
 
 官方文档：[OpenWrt Project: NAT6: IPv6 Masquerading Router](https://openwrt.org/docs/guide-user/network/ipv6/ipv6.nat6)
 
@@ -137,198 +113,174 @@ config interface 'wan6'
 
 4. 修改防火墙规则，防火墙说明文档：[OpenWrt Project: Netfilter Management](https://openwrt.org/docs/guide-user/firewall/netfilter_iptables/netfilter_management)
 
-   ```shell
-   # /etc/config/firewall
-   config zone
-       option name 'wan'
-       # add
-       option masq6 '1'
-   
-   config rule
-       option name 'Allow-ICMPv6-Forward'
-       # add
-       option enabled '0'
-   ```
-
-   添加文件并增加执行权限[akatrevorjay/openwrt-masq6](https://github.com/akatrevorjay/openwrt-masq6)：
-
-   ```shell
-   # /etc/firewall.nat6
-   # Masquerading nat6 firewall script
-   #
-   # Then you can configure in /etc/config/firewall per zone, ala where you have:
-   #   option masq 1
-   # Just drop this in beneath it:
-   #   option masq6 1
-   # For IPv6 privacy (temporary addresses used for outgoing), also add:
-   #   option masq6_privacy 1
-   #
-   # Hope it's useful!
-   #
-   # https://github.com/akatrevorjay/openwrt-masq6
-   # ~ trevorj <github@trevor.joynson.io>
-    
-   set -eo pipefail
-    
-   . /lib/functions.sh
-   . /lib/functions/network.sh
-   . /usr/share/libubox/jshn.sh
-    
-   log() {
-       logger -t nat6 -s "$@"
-   }
-    
-   get_ula_prefix() {
-       uci get network.globals.ula_prefix
-   }
-    
-   validate_ula_prefix() {
-       local ula_prefix="$1"
-       if [ $(echo "$ula_prefix" | grep -c -E "^([0-9a-fA-F]{4}):([0-9a-fA-F]{0,4}):") -ne 1 ] ; then
-           log "Fatal error: IPv6 ULA ula_prefix=\"$ula_prefix\" seems invalid. Please verify that a ula_prefix is set and valid."
-           return 1
-       fi
-   }
-    
-   ip6t() {
-       ip6tables "$@"
-   }
-    
-   ip6t_add() {
-       if ! ip6t -C "$@" &>/dev/null; then
-           ip6t -I "$@"
-       fi
-   }
-    
-   nat6_init() {
-       iptables-save -t nat \
-       | sed -e "/\s[DS]NAT\s/d;/\sMASQUERADE$/d" \
-       | ip6tables-restore -T nat
-   }
-    
-   masq6_network() {
-       # $config contains the ID of the current section
-       local network_name="$1"
-    
-       local device
-       network_get_device device "$network_name" || return 0
-    
-       local done_net_dev
-       for done_net_dev in $DONE_NETWORK_DEVICES; do
-           if [ "$done_net_dev" = "$device" ]; then
-               log "Already configured device=\"$device\", so leaving as is."
-               return 0
-           fi
-       done
-    
-       log "Found device=\"$device\" for network_name=\"$network_name\"."
-    
-       if [ $zone_masq6_privacy -eq 1 ]; then
-           log "Enabling IPv6 temporary addresses for device=\"$device\"."
-    
-           log "Accepting router advertisements on $device even if forwarding is enabled (required for temporary addresses)"
-           echo 2 > "/proc/sys/net/ipv6/conf/$device/accept_ra" \
-             || log "Error: Failed to change router advertisements accept policy on $device (required for temporary addresses)"
-    
-           log "Using temporary addresses for outgoing connections on interface $device"
-           echo 2 > "/proc/sys/net/ipv6/conf/$device/use_tempaddr" \
-             || log "Error: Failed to enable temporary addresses for outgoing connections on interface $device"
-       fi
-    
-       append DONE_NETWORK_DEVICES "$device"
-   }
-    
-   handle_zone() {
-       # $config contains the ID of the current section
-       local config="$1"
-    
-       local zone_name
-       config_get zone_name "$config" name
-    
-       # Enable masquerading via NAT6
-       local zone_masq6
-       config_get_bool zone_masq6 "$config" masq6 0
-    
-       log "Firewall config=\"$config\" zone=\"$zone_name\" zone_masq6=\"$zone_masq6\"."
-    
-       if [ $zone_masq6 -eq 0 ]; then
-           return 0
-       fi
-    
-       # IPv6 privacy extensions: Use temporary addrs for outgoing connections?
-       local zone_masq6_privacy
-       config_get_bool zone_masq6_privacy "$config" masq6_privacy 1
-    
-       log "Found firewall zone_name=\"$zone_name\" with zone_masq6=\"$zone_masq6\" zone_masq6_privacy=\"$zone_masq6_privacy\"."
-    
-       log "Setting up masquerading nat6 for zone_name=\"$zone_name\" with zone_masq6_privacy=\"$zone_masq6_privacy\""
-    
-       local ula_prefix=$(get_ula_prefix)
-       validate_ula_prefix "$ula_prefix" || return 1
-    
-       local postrouting_chain="zone_${zone_name}_postrouting"
-       log "Ensuring ip6tables chain=\"$postrouting_chain\" contains our MASQUERADE."
-       ip6t_add "$postrouting_chain" -t nat \
-           -m comment --comment "!fw3" -j MASQUERADE
-    
-       local input_chain="zone_${zone_name}_input"
-       log "Ensuring ip6tables chain=\"$input_chain\" contains our permissive DNAT rule."
-       ip6t_add "$input_chain" -t filter -m conntrack --ctstate DNAT \
-           -m comment --comment "!fw3: Accept port forwards" -j ACCEPT
-    
-       local forward_chain="zone_${zone_name}_forward"
-       log "Ensuring ip6tables chain=\"$forward_chain\" contains our permissive DNAT rule."
-       ip6t_add "$forward_chain" -t filter -m conntrack --ctstate DNAT \
-           -m comment --comment "!fw3: Accept port forwards" -j ACCEPT
-    
-       local DONE_NETWORK_DEVICES=""
-       config_list_foreach "$config" network masq6_network
-    
-       log "Done setting up nat6 for zone=\"$zone_name\" on devices: $DONE_NETWORK_DEVICES"
-   }
-    
-   main() {
-       nat6_init
-       config_load firewall
-       config_foreach handle_zone zone
-   }
-    
-   main "$@"
-   ```
-   
-   在防火墙中添加该文件
-   
-   ```shell
-   # /etc/config/firewall
-   config include 'nat6'
-   	option path '/etc/firewall.nat6'
-   	option reload '1'
-   ```
-
-
-
-### Passthrough
-
-关于这个方法，网上很多文档都过时了。和NAT相比，配置起来很简单。
-
-1. 安装包`ebtables`和`kmod-ebtables-ipv6`
-2. 设置ipv4转发：
-
 ```shell
-ebtables -t broute -A BROUTING -p ! ipv6 -j DROP -i eth0.2
+# /etc/config/firewall
+config zone
+      option name 'wan'
+      # add
+      option masq6 '1'
+
+config rule
+      option name 'Allow-ICMPv6-Forward'
+      # add
+      option enabled '0'
 ```
 
-3. 内外网桥接
+添加文件并增加执行权限[akatrevorjay/openwrt-masq6](https://github.com/akatrevorjay/openwrt-masq6)：
 
 ```shell
-brctl addif br-lan eth0.2
+# NAT6 + masquerading firewall script
+# https://github.com/akatrevorjay/openwrt-masq6
+# trevorj <github@trevor.joynson.io>
+#
+# You can configure in /etc/config/firewall per zone:
+# * IPv4 masquerading
+#     option masq 1
+# * IPv6 masquerading
+#     option masq6 1
+# * IPv6 privacy extensions
+#     option masq6_privacy 1
+ 
+set -e -o pipefail
+ 
+. /lib/functions.sh
+. /lib/functions/network.sh
+. /usr/share/libubox/jshn.sh
+ 
+log() {
+    logger -t nat6 -s "${@}"
+}
+ 
+get_ula_prefix() {
+    uci get network.globals.ula_prefix
+}
+ 
+validate_ula_prefix() {
+    local ula_prefix="${1}"
+    if [ $(echo "${ula_prefix}" | grep -c -E -e "^([0-9a-fA-F]{4}):([0-9a-fA-F]{0,4}):") -ne 1 ] ; then
+        log "Fatal error: IPv6 ULA ula_prefix=\"${ula_prefix}\" seems invalid. Please verify that a ula_prefix is set and valid."
+        return 1
+    fi
+}
+ 
+ip6t() {
+    ip6tables "${@}"
+}
+ 
+ip6t_add() {
+    if ! ip6t -C "${@}" &> /dev/null; then
+        ip6t -I "${@}"
+    fi
+}
+ 
+nat6_init() {
+    iptables-save -t nat \
+    | sed -e "
+        /\sMASQUERADE$/d
+        /\s[DS]NAT\s/d
+        /\s--match-set\s\S*/s//\06/
+        /,BROADCAST\s/s// /" \
+    | ip6tables-restore -T nat
+}
+ 
+masq6_network() {
+    # ${config} contains the ID of the current section
+    local network_name="${1}"
+ 
+    local device
+    network_get_device device "${network_name}" || return 0
+ 
+    local done_net_dev
+    for done_net_dev in ${DONE_NETWORK_DEVICES}; do
+        if [ "${done_net_dev}" = "${device}" ]; then
+            log "Already configured device=\"${device}\", so leaving as is."
+            return 0
+        fi
+    done
+ 
+    log "Found device=\"${device}\" for network_name=\"${network_name}\"."
+ 
+    if [ "${zone_masq6_privacy}" -eq 1 ]; then
+        log "Enabling IPv6 temporary addresses for device=\"${device}\"."
+ 
+        log "Accepting router advertisements on ${device} even if forwarding is enabled (required for temporary addresses)"
+        echo 2 > "/proc/sys/net/ipv6/conf/${device}/accept_ra" \
+        || log "Error: Failed to change router advertisements accept policy on ${device} (required for temporary addresses)"
+ 
+        log "Using temporary addresses for outgoing connections on interface ${device}"
+        echo 2 > "/proc/sys/net/ipv6/conf/${device}/use_tempaddr" \
+        || log "Error: Failed to enable temporary addresses for outgoing connections on interface ${device}"
+    fi
+ 
+    append DONE_NETWORK_DEVICES "${device}"
+}
+ 
+handle_zone() {
+    # ${config} contains the ID of the current section
+    local config="${1}"
+ 
+    local zone_name
+    config_get zone_name "${config}" name
+ 
+    # Enable masquerading via NAT6
+    local zone_masq6
+    config_get_bool zone_masq6 "${config}" masq6 0
+ 
+    log "Firewall config=\"${config}\" zone=\"${zone_name}\" zone_masq6=\"${zone_masq6}\"."
+ 
+    if [ "${zone_masq6}" -eq 0 ]; then
+        return 0
+    fi
+ 
+    # IPv6 privacy extensions: Use temporary addrs for outgoing connections?
+    local zone_masq6_privacy
+    config_get_bool zone_masq6_privacy "${config}" masq6_privacy 1
+ 
+    log "Found firewall zone_name=\"${zone_name}\" with zone_masq6=\"${zone_masq6}\" zone_masq6_privacy=\"${zone_masq6_privacy}\"."
+ 
+    log "Setting up masquerading nat6 for zone_name=\"${zone_name}\" with zone_masq6_privacy=\"${zone_masq6_privacy}\""
+ 
+    local ula_prefix="$(get_ula_prefix)"
+    validate_ula_prefix "${ula_prefix}" || return 1
+ 
+    local postrouting_chain="zone_${zone_name}_postrouting"
+    log "Ensuring ip6tables chain=\"${postrouting_chain}\" contains our MASQUERADE."
+    ip6t_add "${postrouting_chain}" -t nat \
+        -m comment --comment "!fw3" -j MASQUERADE
+ 
+    local input_chain="zone_${zone_name}_input"
+    log "Ensuring ip6tables chain=\"${input_chain}\" contains our permissive DNAT rule."
+    ip6t_add "${input_chain}" -t filter -m conntrack --ctstate DNAT \
+        -m comment --comment "!fw3: Accept port forwards" -j ACCEPT
+ 
+    local forward_chain="zone_${zone_name}_forward"
+    log "Ensuring ip6tables chain=\"${forward_chain}\" contains our permissive DNAT rule."
+    ip6t_add "${forward_chain}" -t filter -m conntrack --ctstate DNAT \
+        -m comment --comment "!fw3: Accept port forwards" -j ACCEPT
+ 
+    local DONE_NETWORK_DEVICES=""
+    config_list_foreach "${config}" network masq6_network
+ 
+    log "Done setting up nat6 for zone=\"${zone_name}\" on devices: ${DONE_NETWORK_DEVICES}"
+}
+ 
+main() {
+    nat6_init
+    config_load firewall
+    config_foreach handle_zone zone
+}
+ 
+main "${@}"
 ```
 
-4. 杀死`odhcpd`并禁止自动启动
-5. 在LAN接口的 `IPv6 Settings` 选项卡中勾上 `Always announce default router`
-6. 可将上述两条指令添加到启动脚本`/etc/rc.local`中。
+在防火墙中添加该文件
 
-但是这样的话路由器就没有ipv6地址了，对此，以下文章提供了一个方案：[桥接校园网IPv6，并让路由器自身获取IPv6地址](https://zhuanlan.zhihu.com/p/50356712)
+```shell
+# /etc/config/firewall
+config include 'nat6'
+   option path '/etc/config/firewall.nat6'
+   option reload '1'
+```
 
 
 
@@ -486,7 +438,7 @@ nat6_client_rule "公网端口" "内网IP" "内网端口" "proto"
 ```
 config include
 	option type 'script'
-	option path '/etc/config/firewall-dnat6'
+	option path '/etc/config/firewall.dnat6'
 	option family 'any'
 	option reload '1'
 ```
@@ -566,7 +518,7 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
 * 在 网络/接口 界面中添加新接口，选择openvpn的设备，不配置协议
 
     ```wiki
-    config interface 'OpenVPN_0'
+    config interface 'ovpn0'
         option proto 'none'
         # 上面服务器配置中的接口名称
         option ifname 'tun0'
@@ -590,7 +542,7 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
     config zone
         option name 'lan'
         # add context
-        list network 'OpenVPN_0'
+        list network 'ovpn0'
     ```
 
 
