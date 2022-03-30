@@ -21,11 +21,13 @@ OJ测试数据整理：[这里](https://blog.csdn.net/bat67/article/details/5205
 
 * sstream的效率非常低，尽量少用。
 
-* 在使用STL查找算法时，如果序列有序，可以使用二分查找算法而不是find。
-
-  find用于无序序列，因此是线性复杂度。
+* 在使用STL查找算法时，如果**序列有序**，可以使用二分查找算法。
+  find可用于无序序列，是线性复杂度。
 
   二分查找算法包括binary_search，lower_bound，upper_bound和equal_range。
+
+  因为set并不是有序序列，使用通用的二分查找算法的时间复杂度并不是log(n)，
+  需要使用自己的查找方法，比如`std::set::lower_bound`。
 
 * 智能指针的效率比普通指针低一些。
 
