@@ -9,6 +9,14 @@ tags: algorithm c++
 
 
 
+## 5. 最长回文子串
+
+[题目链接](https://leetcode.cn/problems/longest-palindromic-substring/)
+
+这里有一个时间复杂度为 O(n) 的 Manacher 算法。
+
+
+
 ## 28. 实现 strStr()
 
 [题目链接](https://leetcode.cn/problems/implement-strstr/)
@@ -46,6 +54,14 @@ tags: algorithm c++
 
 因此，该方法找到的数是有限的（最多n-1个），可以证明该方法是删选“多数元素”的必要条件。
 随后我们只需要再次遍历数组判断每一个候选数是否为“多数元素”即可。
+
+
+
+## 307. 区域和检索 - 数组可修改
+
+[题目链接](https://leetcode.cn/problems/range-sum-query-mutable/)
+
+这道题可以使用树状数组。
 
 
 
