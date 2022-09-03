@@ -7,7 +7,7 @@ tags: linux router openwrt
 
 
 
-修改时间： 2021-10-13
+修改时间： 2022-09-03
 
 
 
@@ -17,35 +17,14 @@ Model: Newifi-D2
 
 Architecture: MediaTek MT7621 ver:1 eco:3
 
-Firmware Version: OpenWrt 21.02.0 r16279-5cc0535800
+Firmware Version: OpenWrt 21.02.2
+
+22.03版本修改了默认防火墙，很多设置将会失效，谨慎升级。
 
 
+# 1 系统配置
 
-## 配置HTTPS访问
-
-参考：[openwrt开启ssl 使用let‘s encrypt的证书](https://www.right.com.cn/forum/forum.php?mod=viewthread&tid=310924&page=1)
-
-1. 前往`www.sslforfree.com`申请通配符证书
-2. 安装下面两个包：`luci-ssl`，`luci-app-uhttpd`
-3. 将`fullchain.cer`以及`private.key`上传到路由器
-4. 修改`uhttpd`配置文件`/etc/config/uhttpd.conf`，修改证书文件的路径以及监听端口
-5. 重启`uhttpd`服务
-6. 在防火墙中添加端口转发并重启
-
-注意事项：
-
-* 建议关闭`HTTP到HTTPS的重定向`，否则内网使用IP访问会有警告
-* `let‘s encrypt`证书有效期为3个月，需要定期更新
-
-
-
-## 配置阿里DDNS
-
-直接使用下面仓库的脚本即可：[h46incon/AliDDNSBash](https://github.com/h46incon/AliDDNSBash)
-
-
-
-## 配置无线中继
+## 1.1 无线中继
 
 * 新建接口`WWAN`和`WWAN6`，分别配置为`DHCP`以及`DHCPv6`，设置防火墙区域为`wan`
   
@@ -69,7 +48,7 @@ Firmware Version: OpenWrt 21.02.0 r16279-5cc0535800
 
 
 
-## 配置 ipv6
+## 1.2 ipv6
 
 根据这个帖子：[广州移动家宽已支持 dhcpv6-pd#52](https://www.v2ex.com/t/483739#r_6117230)，
 找到了以下两个帖子：[OpenWrt/LEDE 内网转发 IPv6](https://i-meto.com/lede-ipv6/)，
@@ -284,7 +263,7 @@ config include 'nat6'
 
 
 
-## 配置旁路由
+## 1.3 旁路由
 
 事件的起因：由于主路由运行了一些消耗CPU的服务，在NAS中挂了PT以后，经常出现主路由连接数暴涨、CPU不堪重负的情况。为了减少主路由的负担，决定在NAS中安装Openwrt虚拟机分担主路由的一部分功能。
 
@@ -325,17 +304,9 @@ DHCP选项中的第一个数字为`DHCP 选项编号`，可以直接查找相关
 
 
 
-## Firewall
+## 1.4 Firewall
 
 防火墙的额外配置
-
-### 安装ipset
-
-使用`opkg`安装即可，一般用不到，但可以去除一个`Warning`。
-
-```shell
-opkg install ipset
-```
 
 
 
@@ -445,19 +416,44 @@ config include
 
 
 
-## Openvpn
+# 2 软件配置
+
+## 2.1 HTTPS访问
+
+1. 使用[acme](https://github.com/acmesh-official/acme.sh)申请通配符证书
+2. 安装下面两个包：`luci-ssl`，`luci-app-uhttpd`
+3. 将`fullchain.cer`以及`private.key`上传到路由器
+4. 修改`uhttpd`配置文件`/etc/config/uhttpd.conf`，修改证书文件的路径以及监听端口
+5. 重启`uhttpd`服务
+6. 在防火墙中添加端口转发并重启
+
+注意事项：
+
+* 建议关闭`HTTP到HTTPS的重定向`，否则内网使用IP访问会有警告
+* `let‘s encrypt`证书有效期为3个月，需要定期更新
+
+
+
+## 2.2 DDNS
+
+对于阿里云，直接使用下面仓库的脚本即可：
+[h46incon/AliDDNSBash](https://github.com/h46incon/AliDDNSBash)
+
+对于cloudflare，安装下列软件包：`luci-app-ddns`，`ddns-scripts-cloudflare`
+
+
+
+## 2.3 Openvpn
 
 新版的系统中设置方法又简化了。
 
 OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/vpn/openvpn/start)
 
-
-
 ### 在路由器运行Server
 
 **千万不要添加端口转发**
 
-* 安装 `openvpn-openssl `以及界面` luci-i18n-openvpn-zh-cn`
+* 安装`openvpn-openssl`以及界面`luci-app-openvpn`
 
 * 配置`/etc/config/openvpn`，现在可直接引用外部文件：
 
@@ -483,7 +479,7 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
     # 服务器地址
     server 10.8.1.0 255.255.255.0
     # 加密选项
-    ncp-ciphers AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC
+    ncp-ciphers AES-128-CBC
     cipher AES-128-CBC
     # 允许客户端之间互相访问
     client-to-client
@@ -545,8 +541,6 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
         list network 'ovpn0'
     ```
 
-
-
 ### 在旁路由运行Server
 
 同样按照上述过程操作，并且在主路由中添加端口转发，不出意外的话客户端能够成功连接了。
@@ -558,8 +552,6 @@ iptables -t nat -A POSTROUTING -s 10.8.1.0/24 -j MASQUERADE
 ```
 
 重启防火墙，客户端测试能否访问主路由和互联网。
-
-
 
 ### 在终端运行Client
 
@@ -576,7 +568,7 @@ remote [ip] 1194
 # 允许服务器ip变更
 float
 # 加密选项
-ncp-ciphers AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC
+ncp-ciphers AES-128-CBC
 cipher AES-128-CBC
 # 心跳包
 keepalive 15 60
@@ -592,8 +584,6 @@ nobind
 <key></key>
 ```
 
-
-
 ### 在路由器运行Client
 
 在OpenWrt中使用客户端文件连接远程服务器，可以参照server中的步骤，用同样的方式建立一个接口`tun0`，并设定防火墙规则为`wan`，然后将配置文件中的适配器指定为`tun0`。
@@ -604,51 +594,28 @@ nobind
 
 
 
-## vlmcsd
-
-升级了Office2019，学校的KMS还没更新。虽然自己有365，但是不够用。找了一下，有人移植了KMS服务到OpenWrt上，就拿来试试了。
-
-项目地址：[cokebar/openwrt-vlmcsd](https://github.com/cokebar/openwrt-vlmcsd)
-
-编译好的文件在gh-pages分支。Newifi-D2的架构是mipsel_24kc。
-
-luci的安装包是通用的：[cokebar/luci-app-vlmcsd](https://github.com/cokebar/luci-app-vlmcsd)。
-
-用winscp上传到tmp文件夹安装即可。
-
-关于自动激活：
-
-原理很简单， DHCP服务器指定的DNS服务器上有SRV记录指向vlmcsd 。 
-
-Windows下的测试方法如下：
-
-```bash
-nslookup -type=srv _vlmcs._tcp.lan
-```
-
-
-
-## 其它模块
-
-`upnp`:
-
-```shell
-opkg install luci-i18n-upnp-en
-```
+## 2.4 其它模块
 
 `wol`:
 
 ```shell
-opkg install luci-i18n-wol-en
+opkg install luci-app-wol
 ```
 
 
 
-## 相关指令
+# 3 其它指令
 
 查看当前连接：
 
 ```bash
 cat /proc/net/nf_conntrack
 ```
+
+测试openssl性能：
+
+```bash
+openssl speed -evp AES-128-GCM
+```
+
 
