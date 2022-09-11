@@ -61,9 +61,14 @@ tags: algorithm c++
 
 [题目链接](https://leetcode.cn/problems/range-sum-query-mutable/)
 
-这道题可以使用树状数组。
+这道题可以使用树状数组或线段树。
+这两种数据结构都能够更新并查询区间内的最小值、最大值或者总和等信息，
+但是树状数组的查询区间必须从首项开始，而线段树可以是任意区间。
+在空间占用上，当数据数量n为2的次方项时，树状数组的空间复杂度为O(n)，线段树为O(2n)。
 
-
+周赛题
+[6206. 最长递增子序列 II](https://leetcode.cn/problems/longest-increasing-subsequence-ii/)
+可用线段树模版。
 
 ## 382. 链表随机节点
 
