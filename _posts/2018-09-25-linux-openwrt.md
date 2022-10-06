@@ -545,11 +545,16 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
 
 同样按照上述过程操作，并且在主路由中添加端口转发，不出意外的话客户端能够成功连接了。
 
-然后你会发现只能访问Openvpn的子网和旁路由自己。因为旁路由只有1个LAN接口，我们需要手动在路由表中添加转发（在自定义防火墙规则中添加）：
+然后你会发现只能访问Openvpn的子网和旁路由自己。
+因为旁路由只有1个LAN接口，我们需要手动在路由表中添加地址转换，这里有两种方式：
 
-```bash
-iptables -t nat -A POSTROUTING -s 10.8.1.0/24 -j MASQUERADE
-```
+1. 在自定义防火墙规则中添加（只适用于fw3）
+
+    ```bash
+    iptables -t nat -A POSTROUTING -s 10.8.1.0/24 -j MASQUERADE
+    ```
+
+2. 在`NAT Rules`中添加（同时适用于fw3和fw4）
 
 重启防火墙，客户端测试能否访问主路由和互联网。
 
