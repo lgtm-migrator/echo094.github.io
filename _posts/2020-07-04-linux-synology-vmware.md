@@ -73,34 +73,7 @@ tags: linux synology
 
 
 
-## 4 安装qbittorrent
-
-参考下面这篇文章：
-
-[群晖docker安装80x86/qbittorrent完整教程 - 大卫 blog](https://www.iyuu.cn/archives/304/)
-
-0. 先安装`Docker`，容器版的QB可以自己链接需要的下载路径，方便以后的迁移（虽然用工具也很方便）。
-1. 在`Docker`中安装`80x86/qbittorrent`，这里选择`alpine`，`focal`为Ubuntu平台。
-2. 在`Image`标签页中新建`Container`，注意需要在高级中设置必要的路径和端口。
-   * 如果需要使用ipv6，需要将网络设置为`Use the same network as Docker Host`，使用桥接时ipv6会失效。
-   * 需要在环境变量中配置`PUID`和`PGID`，使用默认设置会出现无法访问下载文件夹的问题。
-3. 在`Container`标签页中运行`qbittorrent`，默认的用户名和密码可以在`Details/Log`中查看，为`admin`和`adminadmin`。
-
-* 默认的配置文件开启了HTTPS，如果不上传证书，可以在配置文件`config/qBittorrent.conf`中将`WebUI\HTTPS\Enabled`设置为`false`。
-
-这时可以在浏览器中打开QB的Web页面了。
-
-**迁移数据**
-
-如果想要将现有的保种数据迁移过来，可以使用下面这个python工具：
-
-[jslay88/qbt_migrate: Migrate qBittorrent downloads](https://github.com/jslay88/qbt_migrate)
-
-经测试`4.2.5`版本的`BT_backup`可以完美转换，我顺便理了下Windows下的下载路径。
-
-
-
-## 5 添加直连硬盘
+## 4 添加直连硬盘
 
 装黑群一是方便目前的文件共享，二是在以后转白后能够直接把现有硬盘放上去。于是所有的资料都放在实体硬盘里，而套件等内容放在虚拟硬盘中。
 
@@ -170,4 +143,27 @@ mount /dev/md3 /mnt/ -o rw
 开机以后硬盘能够正常读取，只需要修复一下系统分区，毕竟920的系统版本比黑群的高。
 
 根据官方文档：[如何在多台 Synology NAS（DSM 6.0 和更新版本）之间进行迁移](https://www.synology.com/zh-cn/knowledgebase/DSM/tutorial/General_Setup/How_to_migrate_between_Synology_NAS_DSM_6_0_and_later)，使用**Hyper Backup**迁移时，发现qbittorrent等第三方套件都不能备份。这也不是大问题，可以把包含配置文件的目录备份，再在新设备中手动安装套件即可。
+
+
+
+## 3 清理计划任务日志
+
+参考下面的帖子: 
+[How to purge task manager logs](https://www.reddit.com/r/synology/comments/osc8tb/how_to_purge_task_manager_logs/)
+
+群晖计划任务的运行记录保存在数据库`sched_status.sqlite`的表`task_status`中，
+数据库位于目录`/usr/syno/etc`，只需要清空对应`task_id`的记录即可。
+
+```sql
+select count(*) from task_status where task_id=1;
+delete from task_status where task_id=1;
+.quit
+```
+
+`task_id`可以使用下述命令查找：
+
+```bash
+/usr/syno/bin/synoschedtask --get
+```
+
 
